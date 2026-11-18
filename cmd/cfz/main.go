@@ -20,6 +20,8 @@ import (
 
 const ramaAyuda = "compara la rama contra ramaBase en vez de leer los cambios sin commitear"
 
+const ramaActual = "@"
+
 const uso = `comandos:
   init [--force]                     crea un cfz.yaml inicial en la raíz del repo
   list [--branch <rama>]             muestra qué entraría al paquete
@@ -99,6 +101,11 @@ func preparar(rama string) (contexto, error) {
 	if err := filtro.Validar(slices.Concat(c.cfg.Excluir, c.cfg.Fuentes)); err != nil {
 		return c, err
 	}
+	if rama == ramaActual {
+		if rama, err = c.repo.RamaActual(); err != nil {
+			return c, fmt.Errorf("no se pudo leer la rama actual %w", err)
+		}
+	}
 	c.rama = rama
 	c.modoRama = rama != ""
 	var cambios []git.Cambio
@@ -162,7 +169,7 @@ func iniciar(args []string) error {
 func listar(args []string) error {
 	banderas := flag.NewFlagSet("list", flag.ContinueOnError)
 	rama := banderas.String("branch", "", ramaAyuda)
-	if err := banderas.Parse(args); err != nil {
+	if err := banderas.Parse(buscarRama(args)); err != nil {
 		return err
 	}
 	c, err := preparar(*rama)
@@ -227,7 +234,7 @@ func empaquetar(args []string) error {
 	rama := banderas.String("branch", "", ramaAyuda)
 	forzar := banderas.Bool("force", false, "reemplaza un paquete existente")
 	compilar := banderas.Bool("build", false, "compila el proyecto (comando 'compilar' del cfz.yaml) antes de empaquetar")
-	if err := banderas.Parse(args); err != nil {
+	if err := banderas.Parse(buscarRama(args)); err != nil {
 		return err
 	}
 	c, err := preparar(*rama)
@@ -288,7 +295,18 @@ func empaquetar(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Archivos copiados: %d\nArchivos del bin:  %d\nExcluidos:         %d\nEliminados:        %d\n\nCarpeta: %s\nZip:     %s\n",
-		r.Archivos, r.ArchivosBin, len(c.excluidos), len(eliminados), r.Carpeta, r.Zip)
+	fmt.Printf("Archivos copiados: %d\nArchivos del bin:  %d\nExcluidos:         %d\nEliminados:        %d\n\nCarpeta: %s\n",
+		r.Archivos, r.ArchivosBin, len(c.excluidos), len(eliminados), r.Carpeta)
 	return nil
+}
+
+func buscarRama(args []string) []string {
+	salida := make([]string, 0, len(args))
+	for i, a := range args {
+		if (a == "--branch" || a == "-branch") && (i == len(args)-1 || strings.HasPrefix(args[i+1], "-")) {
+			a += "=" + ramaActual
+		}
+		salida = append(salida, a)
+	}
+	return salida
 }
