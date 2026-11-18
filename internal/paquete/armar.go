@@ -84,8 +84,8 @@ func Armar(e Entrada) (Resultado, error) {
 	if err := EscribirEliminados(r.Carpeta, e.Eliminados); err != nil {
 		return r, err
 	}
-	if err := Comprimir(r.Carpeta, r.Zip); err != nil {
-		return r, err
-	}
+	// if err := Comprimir(r.Carpeta, r.Zip); err != nil {
+	// 	return r, err
+	// }
 	return r, nil
 }
